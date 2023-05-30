@@ -1,26 +1,75 @@
 import * as express from 'express'
 import {writeJsonResponse} from '../../utils/expressHelper.js'
-import { RequestArgs } from '../models/req.js'
-import { ProxyServiceAPI } from '../services/aisService.js'
+//import { ProxyServiceAPI } from '../services/aisService.js'
 import logger from '../../utils/logger.js'
+import { AIsProps, AIsProxyRequest, DelegateService } from 'aisbreaker-api'
  
-export async function sendMessageViaProxy(req: express.Request, res: express.Response): Promise<void> {
+export async function task(req: express.Request, res: express.Response): Promise<void> {
     try {
-        logger.debug(`sendMessageViaProxy() - started`)
-        const json = req.body
-        logger.debug(`sendMessageViaProxy() - json=${JSON.stringify(json)}`)
+        logger.debug(`task() - started`)
 
-        const requestArgs: RequestArgs = json
+        // get aisProxyRequest
+        const json = req.body
+        logger.debug(`task() - json=${JSON.stringify(json)}`)
+        const aisProxyRequest: AIsProxyRequest = json
+
+        // check and use authentication (bearer header)
+        const serviceProps = extractServiceFromRequest(req, aisProxyRequest)
 
         // get/create requested service
-        const service = new ProxyServiceAPI(requestArgs.props)
+        const service = new DelegateService(serviceProps)
 
         // call requested service
-        const response = await service.sendMessage(requestArgs.request)
+        const response = await service.sendMessage(req.body.request)
 
         writeJsonResponse(res, 200, response)
     } catch (err) {
-        logger.error(`sendMessageViaProxy() - error: ${err}`, err)
+        logger.error(`task() - error: ${err}`, err)
         writeJsonResponse(res, 500, {error: {type: 'server_error', message: `Server Error (sendMessageViaProxy): ${err}`}})
     }
+}
+
+function extractServiceFromRequest(req: express.Request, aisProxyRequest: AIsProxyRequest): AIsProps {
+    // extract service props
+    const service = aisProxyRequest.service
+    if (!service) {
+        throw new Error(`service missing in request`)
+    }
+
+    // extract access token
+    const authHeader = req.headers.authorization
+    logger.debug("authHeader: "+authHeader) 
+    if (!authHeader) {
+        throw new Error(`Authorization header missing in request`)
+    }
+    const bearer = authHeader.split(' ')
+    if (bearer.length !== 2) {
+        throw new Error(`Authorization header invalid in request`)
+    }
+    const accessTokenBase64 = bearer[1]
+    if (!accessTokenBase64) {
+        throw new Error(`Access token missing in request`)
+    }
+    try {
+        // decode base64
+        const accessToken = Buffer.from(accessTokenBase64, 'base64').toString('utf-8')
+
+        const accessTokenObj = JSON.parse(accessToken)
+        if (!accessTokenObj) {
+            throw new Error(`Access token invalid in request`)
+        }
+        const accessKeys = accessTokenObj.accessKeys
+        logger.debug("accessKeys: "+JSON.stringify(accessKeys))
+
+
+        // copy requires accessKey to service props
+        if (service.accessKeyId) {
+            service.accessKey = accessKeys[service.accessKeyId]
+        }
+    } catch (err) {
+        logger.warn(`Access token invalid and ignored`, err)
+    }
+
+    logger.debug("Requested service: "+JSON.stringify(service)) 
+    return service
 }

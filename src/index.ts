@@ -4,7 +4,7 @@ import cors from 'cors'
 import morgan from 'morgan'
 
 import { ping, version as getVersion } from './rest-api/controllers/greeting.js'
-import { sendMessageViaProxy } from './rest-api/controllers/ais.js'
+import { task } from './rest-api/controllers/ais.js'
 
 /*
 import jwt from 'express-jwt'
@@ -54,11 +54,11 @@ async function startServer() {
     //
 
     // deliver some static content (root webapp)
-    app.get('/', (req, res) => {
+    app.get('/', cors(), (req, res) => {
         res.send('Hello from AIsBreaker Proxy Server ... Details on AIsBreaker.org ...')
     })
 
-    app.get('/info', (req, res) => {
+    app.get('/info', cors(), (req, res) => {
         getInfoString().then(resultStr => {
             res.send(""+resultStr);
         })
@@ -75,16 +75,16 @@ async function startServer() {
     */
 
     // API
-    app.get(basePath + "/ping", function (req, res) {
+    app.get(basePath + "/ping", cors(), (req, res) => {
         ping(req, res)
     })
 
-    app.get(basePath + '/version', (req, res) => {
+    app.get(basePath + '/version', cors(), (req, res) => {
         getVersion(req, res, version)
     })
 
-    app.post(basePath + '/send_message_via_proxy', /*checkJwt,*/(req, res) => {
-        sendMessageViaProxy(req, res)
+    app.post(basePath + '/task', cors(), /*checkJwt,*/(req, res) => {
+        task(req, res)
     })
 
     //
