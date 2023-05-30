@@ -58,16 +58,16 @@ function extractServiceFromRequest(req: express.Request, aisProxyRequest: AIsPro
         if (!accessTokenObj) {
             throw new Error(`Access token invalid in request`)
         }
-        const accessKeys = accessTokenObj.accessKeys
-        logger.debug("accessKeys: "+JSON.stringify(accessKeys))
+        const apiKeys = accessTokenObj.apiKeys
+        logger.debug("apiKeys: "+JSON.stringify(apiKeys))
 
 
         // copy requires accessKey to service props
-        if (service.accessKeyId) {
-            service.accessKey = accessKeys[service.accessKeyId]
+        if (service.apiKeyId) {
+            service.apiKey = apiKeys[service.apiKeyId]
         }
     } catch (err) {
-        logger.warn(`Access token invalid and ignored`, err)
+        logger.warn(`Access token (apiKey) invalid and ignored`, err)
     }
 
     logger.debug("Requested service: "+JSON.stringify(service)) 
