@@ -8,7 +8,7 @@ on:
 
 env:
   IMAGE_NAME: aisbreaker/aisbreaker-proxy-server
-  ST: ${{ secrets.SECRET_TOKEN }}
+  ST: ${{ secrets.DOCKER_USERNAME }}
 
 jobs:
   build-and-push:
